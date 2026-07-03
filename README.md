@@ -342,10 +342,3 @@ MIT License - Free to use for educational purposes.
 Built for **TechSprint 2025 - GDGOC Hackathon**
 
 **GitHub**: [@sizwinz](https://github.com/sizwinz), [@divyviradiya1501](https://github.com/divyviradiya1501)
-
-## Support
-
-For issues or questions:
-
-- Create a GitHub issue
-- Contact: <sahajitaliya33@gmail.com>
