@@ -18,7 +18,7 @@ from langchain_community.document_loaders import (
 from langchain_core.documents import Document as LangchainDocument
 from loguru import logger
 
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
 
 settings = get_settings()
 
@@ -29,8 +29,9 @@ class DocumentProcessor:
     Supports: PDF, DOCX, TXT files.
     """
 
-    def __init__(self):
-        self.documents_dir = Path("./documents")
+    def __init__(self, settings_obj: Settings | None = None, documents_dir: Path | None = None):
+        self.settings = settings_obj or settings
+        self.documents_dir = documents_dir or Path("./documents")
         self.documents_dir.mkdir(exist_ok=True)
 
         # Text splitter for chunking

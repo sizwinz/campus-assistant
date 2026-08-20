@@ -21,12 +21,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from loguru import logger
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from app.core.config import get_settings
 from app.core.database import init_db
+from app.core.rate_limit import limiter
 from app.api import (
     chat_router,
     faq_router,
@@ -133,12 +132,6 @@ CHAT_MESSAGES = Counter(
 )
 
 # ===========================================
-# Rate Limiter
-# ===========================================
-
-limiter = Limiter(key_func=get_remote_address)
-
-# ===========================================
 # Application Lifespan
 # ===========================================
 
@@ -174,12 +167,12 @@ A multilingual conversational AI assistant for educational institutions.
 - **FAQ Management**: Easy-to-manage FAQ database
 - **Document Processing**: Upload and index PDFs, DOCX files
 - **Context Awareness**: Multi-turn conversation support
-- **Platform Integration**: Web, Telegram, WhatsApp
+- **Platform Integration**: Web and Telegram
 
 ### API Groups:
 - **/chat**: Main chatbot interaction endpoints
-- **/faqs**: FAQ management (CRUD operations)
-- **/documents**: Document upload and indexing
+- **/faqs**: FAQ management (admin auth required for writes)
+- **/documents**: Document upload and indexing (admin auth required for writes)
 - **/admin**: Dashboard and analytics
 - **/telegram**: Telegram bot integration
     """,

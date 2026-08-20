@@ -3,11 +3,15 @@ Telegram Bot Integration.
 Handles Telegram webhook and message processing.
 """
 
-from fastapi import APIRouter, Request, HTTPException
+from urllib.parse import urlparse
+
+from fastapi import APIRouter, Depends, Request, HTTPException
 from loguru import logger
 import httpx
 
+from app.api.dependencies import verify_admin
 from app.core.config import get_settings
+from app.core.rate_limit import TELEGRAM_WEBHOOK_RATE_LIMIT, ADMIN_RATE_LIMIT, limiter
 from app.models.schemas import ChatRequest
 
 router = APIRouter(prefix="/telegram", tags=["Telegram"])
@@ -15,6 +19,7 @@ settings = get_settings()
 
 
 @router.post("/webhook")
+@limiter.limit(TELEGRAM_WEBHOOK_RATE_LIMIT)
 async def telegram_webhook(request: Request):
     """
     Telegram webhook endpoint.
@@ -115,7 +120,8 @@ async def send_telegram_message(chat_id: int, text: str):
     if not settings.telegram_bot_token:
         return
 
-    url = f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage"
+    token = settings.telegram_bot_token.get_secret_value()
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
 
     try:
         async with httpx.AsyncClient() as client:
@@ -132,17 +138,27 @@ async def send_telegram_message(chat_id: int, text: str):
 
 
 @router.get("/setup")
-async def setup_webhook(host: str):
+@limiter.limit(ADMIN_RATE_LIMIT)
+async def setup_webhook(
+    request: Request,
+    host: str | None = None,
+    admin: str = Depends(verify_admin),
+):
     """
-    Set up Telegram webhook.
-    Call this once with your public URL.
+    Set up Telegram webhook. Requires admin authentication.
+
+    In production, PUBLIC_BASE_URL must be configured and HTTPS. If host is
+    provided, it must match PUBLIC_BASE_URL exactly.
     """
+    del request, admin
     if not settings.telegram_bot_token:
         raise HTTPException(status_code=503, detail="Telegram not configured")
 
-    webhook_url = f"{host}/api/v1/telegram/webhook"
+    base_url = _validate_webhook_base_url(host)
+    webhook_url = f"{base_url}/api/v1/telegram/webhook"
 
-    url = f"https://api.telegram.org/bot{settings.telegram_bot_token}/setWebhook"
+    token = settings.telegram_bot_token.get_secret_value()
+    url = f"https://api.telegram.org/bot{token}/setWebhook"
 
     try:
         async with httpx.AsyncClient() as client:
@@ -170,7 +186,8 @@ async def get_bot_info():
     if not settings.telegram_bot_token:
         raise HTTPException(status_code=503, detail="Telegram not configured")
 
-    url = f"https://api.telegram.org/bot{settings.telegram_bot_token}/getMe"
+    token = settings.telegram_bot_token.get_secret_value()
+    url = f"https://api.telegram.org/bot{token}/getMe"
 
     try:
         async with httpx.AsyncClient() as client:
@@ -184,3 +201,27 @@ async def get_bot_info():
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+def _validate_webhook_base_url(host: str | None) -> str:
+    configured = settings.public_base_url.rstrip("/") if settings.public_base_url else None
+    requested = host.rstrip("/") if host else None
+
+    if configured:
+        base_url = configured
+        if requested and requested != configured:
+            raise HTTPException(status_code=400, detail="host must match configured PUBLIC_BASE_URL")
+    elif settings.is_production:
+        raise HTTPException(status_code=400, detail="PUBLIC_BASE_URL must be configured in production")
+    elif requested:
+        base_url = requested
+    else:
+        raise HTTPException(status_code=400, detail="host or PUBLIC_BASE_URL is required")
+
+    parsed = urlparse(base_url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise HTTPException(status_code=400, detail="Webhook base URL must be an absolute URL")
+    if settings.is_production and parsed.scheme != "https":
+        raise HTTPException(status_code=400, detail="Telegram webhook must use HTTPS in production")
+
+    return base_url

@@ -58,7 +58,15 @@ async_session_maker = async_sessionmaker(
 
 
 async def init_db():
-    """Initialize database tables."""
+    """Initialize database tables in development/test only.
+
+    Production deployments must run Alembic migrations instead of letting the
+    application mutate schema at startup.
+    """
+    if settings.is_production:
+        logger.info("Skipping create_all in production; run Alembic migrations before startup")
+        return
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     logger.info("Database tables initialized")

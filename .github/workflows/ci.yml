@@ -134,7 +134,7 @@ jobs:
       - name: Run tests with coverage
         run: npm run test:coverage
         env:
-          NEXT_PUBLIC_API_URL: http://localhost:8000
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4
@@ -174,7 +174,7 @@ jobs:
           push: false
           tags: campus-assistant-frontend:${{ github.sha }}
           build-args: |
-            NEXT_PUBLIC_API_URL=http://localhost:8000
+            NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

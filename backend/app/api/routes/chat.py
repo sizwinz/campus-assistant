@@ -3,11 +3,12 @@ Chat API Routes.
 Main endpoint for chatbot interactions.
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
 
 from app.core.database import get_db
+from app.core.rate_limit import CHAT_RATE_LIMIT, limiter
 from app.models.schemas import ChatRequest, ChatResponse
 from app.services.chatbot_engine import get_chatbot_engine
 from app.services.translation import get_translation_service
@@ -16,8 +17,10 @@ router = APIRouter(prefix="/chat", tags=["Chat"])
 
 
 @router.post("/", response_model=ChatResponse)
+@limiter.limit(CHAT_RATE_LIMIT)
 async def send_message(
-    request: ChatRequest,
+    request: Request,
+    chat_request: ChatRequest,
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -32,9 +35,10 @@ async def send_message(
     Returns:
     - Bot's response with detected language, confidence, and sources
     """
+    del request
     try:
         engine = get_chatbot_engine()
-        response = await engine.process_message(request, db)
+        response = await engine.process_message(chat_request, db)
         return response
 
     except Exception as e:

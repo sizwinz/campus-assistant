@@ -110,6 +110,8 @@ class Document(Base):
     category = Column(String(100), nullable=True)
     description = Column(Text, nullable=True)
     is_indexed = Column(Boolean, default=False)
+    indexing_status = Column(String(20), default="pending")
+    indexing_error = Column(Text, nullable=True)
     chunk_count = Column(Integer, default=0)
     uploaded_at = Column(DateTime, default=datetime.utcnow)
     uploaded_by = Column(String(100), nullable=True)

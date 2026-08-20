@@ -6,179 +6,59 @@ SECURITY: Uses bcrypt for password verification.
 Admin password hash must be set via ADMIN_PASSWORD_HASH environment variable.
 """
 
-import secrets
 from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from loguru import logger
-from sqlalchemy import func, select
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.dependencies import verify_admin
 from app.core.config import get_settings
 from app.core.database import get_db
-from app.core.security import get_password_hash, verify_password
+from app.core.rate_limit import ADMIN_RATE_LIMIT, limiter
 from app.models.database import (
-    ConversationLog,
-    Document,
     Escalation,
     EscalationStatus,
-    FAQ,
     Feedback,
     Message,
     Session,
 )
 from app.models.schemas import (
-    AnalyticsSummary,
-    EscalationCreate,
-    EscalationResponse,
     EscalationUpdate,
 )
+from app.services.admin_service import AdminService
 from app.services.session_manager import get_session_manager
 from app.services.vector_store import get_vector_store
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
-security = HTTPBasic()
 settings = get_settings()
-
-# Default password hash for development (password: "dev-password-change-me")
-# In production, set ADMIN_PASSWORD_HASH environment variable
-DEV_PASSWORD_HASH = "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4.VTtYn/WNnBOAHy"
-
-
-def verify_admin(credentials: HTTPBasicCredentials = Depends(security)) -> str:
-    """
-    Verify admin credentials using secure password comparison.
-
-    Uses bcrypt for password verification to prevent timing attacks
-    and ensure secure password storage.
-
-    Returns:
-        Admin username if authentication successful
-
-    Raises:
-        HTTPException: 401 if credentials are invalid
-    """
-    # Use timing-safe comparison for username
-    correct_username = secrets.compare_digest(
-        credentials.username.encode("utf-8"),
-        settings.admin_username.encode("utf-8")
-    )
-
-    # Get password hash - use env var or development default
-    password_hash = settings.admin_password_hash
-    if not password_hash:
-        if settings.is_production:
-            logger.error("ADMIN_PASSWORD_HASH not set in production environment")
-            raise HTTPException(
-                status_code=500,
-                detail="Server configuration error",
-            )
-        # Use development default (password: "dev-password-change-me")
-        password_hash = DEV_PASSWORD_HASH
-        logger.warning("Using development default password. Set ADMIN_PASSWORD_HASH in production.")
-
-    # Verify password using bcrypt (timing-attack resistant)
-    correct_password = verify_password(credentials.password, password_hash)
-
-    if not (correct_username and correct_password):
-        logger.warning(f"Failed admin login attempt for user: {credentials.username}")
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid credentials",
-            headers={"WWW-Authenticate": "Basic"},
-        )
-
-    logger.info(f"Admin login successful: {credentials.username}")
-    return credentials.username
 
 
 # ==================== Dashboard ====================
 
 
 @router.get("/dashboard")
+@limiter.limit(ADMIN_RATE_LIMIT)
 async def get_dashboard(
+    request: Request,
     db: AsyncSession = Depends(get_db),
     admin: str = Depends(verify_admin),
 ):
     """
     Get dashboard summary with key metrics.
     """
-    now = datetime.utcnow()
-    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    week_ago = now - timedelta(days=7)
-
-    # Total sessions
-    total_sessions = await db.scalar(select(func.count(Session.id)))
-
-    # Active sessions (last 24 hours)
-    active_sessions = await db.scalar(
-        select(func.count(Session.id)).where(
-            Session.updated_at >= now - timedelta(hours=24)
-        )
-    )
-
-    # Total messages
-    total_messages = await db.scalar(select(func.count(Message.id)))
-
-    # Today's messages
-    today_messages = await db.scalar(
-        select(func.count(Message.id)).where(Message.created_at >= today_start)
-    )
-
-    # Pending escalations
-    pending_escalations = await db.scalar(
-        select(func.count(Escalation.id)).where(
-            Escalation.status == EscalationStatus.PENDING
-        )
-    )
-
-    # FAQ count
-    faq_count = await db.scalar(select(func.count(FAQ.id)).where(FAQ.is_active == True))
-
-    # Document count
-    doc_count = await db.scalar(select(func.count(Document.id)))
-
-    # Vector store stats
-    vector_store = get_vector_store()
-    vector_stats = await vector_store.get_stats()
-
-    # Average confidence (last 7 days)
-    avg_confidence = await db.scalar(
-        select(func.avg(Message.confidence)).where(
-            Message.created_at >= week_ago, Message.confidence.isnot(None)
-        )
-    )
-
-    return {
-        "sessions": {
-            "total": total_sessions,
-            "active_24h": active_sessions,
-        },
-        "messages": {
-            "total": total_messages,
-            "today": today_messages,
-        },
-        "escalations": {
-            "pending": pending_escalations,
-        },
-        "knowledge_base": {
-            "faqs": faq_count,
-            "documents": doc_count,
-            "vector_chunks": vector_stats.get("total_documents", 0),
-        },
-        "performance": {
-            "avg_confidence_7d": round(avg_confidence or 0, 1),
-        },
-    }
+    del request, admin
+    return await AdminService(db).get_dashboard()
 
 
 # ==================== Analytics ====================
 
 
 @router.get("/analytics")
+@limiter.limit(ADMIN_RATE_LIMIT)
 async def get_analytics(
+    request: Request,
     days: int = Query(7, ge=1, le=90),
     db: AsyncSession = Depends(get_db),
     admin: str = Depends(verify_admin),
@@ -186,55 +66,8 @@ async def get_analytics(
     """
     Get detailed analytics for the specified period.
     """
-    now = datetime.utcnow()
-    start_date = now - timedelta(days=days)
-
-    # Messages by language
-    result = await db.execute(
-        select(Message.original_language, func.count(Message.id))
-        .where(Message.created_at >= start_date, Message.original_language.isnot(None))
-        .group_by(Message.original_language)
-    )
-    languages = {row[0]: row[1] for row in result.fetchall()}
-
-    # Messages by intent
-    result = await db.execute(
-        select(Message.intent, func.count(Message.id))
-        .where(Message.created_at >= start_date, Message.intent.isnot(None))
-        .group_by(Message.intent)
-        .order_by(func.count(Message.id).desc())
-        .limit(10)
-    )
-    intents = {row[0]: row[1] for row in result.fetchall()}
-
-    # Daily message counts
-    daily_counts = []
-    for i in range(days):
-        day = start_date + timedelta(days=i)
-        day_end = day + timedelta(days=1)
-
-        count = await db.scalar(
-            select(func.count(Message.id)).where(
-                Message.created_at >= day, Message.created_at < day_end
-            )
-        )
-        daily_counts.append({"date": day.strftime("%Y-%m-%d"), "count": count})
-
-    # Sessions by platform
-    result = await db.execute(
-        select(Session.platform, func.count(Session.id))
-        .where(Session.created_at >= start_date)
-        .group_by(Session.platform)
-    )
-    platforms = {row[0]: row[1] for row in result.fetchall()}
-
-    return {
-        "period_days": days,
-        "languages_used": languages,
-        "top_intents": intents,
-        "daily_messages": daily_counts,
-        "platforms": platforms,
-    }
+    del request, admin
+    return await AdminService(db).get_analytics(days)
 
 
 # ==================== Conversation Logs ====================

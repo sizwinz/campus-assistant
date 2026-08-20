@@ -115,6 +115,8 @@ class DocumentUploadResponse(BaseModel):
     filename: str
     file_type: str
     is_indexed: bool
+    indexing_status: str
+    indexing_error: Optional[str] = None
     chunk_count: int
     message: str
 
@@ -128,6 +130,8 @@ class DocumentInfo(BaseModel):
     category: Optional[str]
     description: Optional[str]
     is_indexed: bool
+    indexing_status: str
+    indexing_error: Optional[str] = None
     chunk_count: int
     uploaded_at: datetime
 

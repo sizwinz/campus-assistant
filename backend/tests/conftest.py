@@ -16,7 +16,7 @@ from sqlalchemy.pool import StaticPool
 os.environ["ENVIRONMENT"] = "test"
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
 os.environ["SECRET_KEY"] = "test-secret-key-not-for-production"
-os.environ["ADMIN_PASSWORD_HASH"] = "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4.VTtYn/WNnBOAHy"  # dev-password-change-me
+os.environ["ADMIN_PASSWORD_HASH"] = "$2b$12$.8rTB.T6wG/8iv5ma1BTkOPTXDcrbjwcKl1s2vCUVdP5zPnp59nWW"  # dev-password-change-me
 
 from app.main import app
 from app.core.database import get_db

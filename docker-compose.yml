@@ -54,6 +54,8 @@ services:
       # Admin (use hashed password in production)
       - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
       - ADMIN_PASSWORD_HASH=${ADMIN_PASSWORD_HASH}
+      - PUBLIC_BASE_URL=${PUBLIC_BASE_URL}
+      - RUN_MIGRATIONS=${RUN_MIGRATIONS:-true}
       # CORS
       - CORS_ORIGINS=http://localhost:3000,http://frontend:3000
       # Vector DB
@@ -83,13 +85,14 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+        - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
     container_name: campus-assistant-web
     restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
+      - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
     depends_on:
       backend:
         condition: service_healthy

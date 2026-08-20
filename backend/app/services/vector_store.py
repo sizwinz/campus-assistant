@@ -14,7 +14,7 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_core.documents import Document as LangchainDocument
 from loguru import logger
 
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
 
 settings = get_settings()
 
@@ -25,8 +25,9 @@ class VectorStore:
     Uses ChromaDB with multilingual sentence transformers.
     """
 
-    def __init__(self):
-        self.persist_directory = Path(settings.chroma_persist_directory)
+    def __init__(self, settings_obj: Settings | None = None):
+        self.settings = settings_obj or settings
+        self.persist_directory = Path(self.settings.chroma_persist_directory)
         self.persist_directory.mkdir(parents=True, exist_ok=True)
 
         self.collection_name = "campus_assistant"
@@ -37,9 +38,9 @@ class VectorStore:
     def _get_embeddings(self) -> HuggingFaceEmbeddings:
         """Get or create embeddings model."""
         if self._embeddings is None:
-            logger.info(f"Loading embedding model: {settings.embedding_model}")
+            logger.info(f"Loading embedding model: {self.settings.embedding_model}")
             self._embeddings = HuggingFaceEmbeddings(
-                model_name=settings.embedding_model,
+                model_name=self.settings.embedding_model,
                 model_kwargs={"device": "cpu"},
                 encode_kwargs={"normalize_embeddings": True},
             )
@@ -188,7 +189,7 @@ class VectorStore:
                 "total_documents": count,
                 "collection_name": self.collection_name,
                 "persist_directory": str(self.persist_directory),
-                "embedding_model": settings.embedding_model,
+                "embedding_model": self.settings.embedding_model,
             }
 
         except Exception as e:

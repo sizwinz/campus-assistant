@@ -12,8 +12,10 @@ import json
 import requests
 import argparse
 import sys
+from getpass import getpass
+from requests.auth import HTTPBasicAuth
 
-def load_faqs(api_url: str = "http://localhost:8000"):
+def load_faqs(api_url: str = "http://localhost:8000", auth: HTTPBasicAuth | None = None):
     """Load FAQs from seed_faqs.json into the database."""
 
     # Check if server is running
@@ -46,6 +48,7 @@ def load_faqs(api_url: str = "http://localhost:8000"):
         response = requests.post(
             f"{api_url}/api/v1/faqs/bulk-import",
             json=faqs,
+            auth=auth,
             timeout=60
         )
         if response.status_code == 200:
@@ -74,6 +77,7 @@ def load_faqs(api_url: str = "http://localhost:8000"):
             response = requests.post(
                 f"{api_url}/api/v1/faqs/",
                 json=faq,
+                auth=auth,
                 timeout=30
             )
             if response.status_code == 200:
@@ -124,6 +128,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Load seed FAQs into database")
     parser.add_argument("--url", default="http://localhost:8000", help="API base URL")
     parser.add_argument("--verify-only", action="store_true", help="Only verify existing FAQs")
+    parser.add_argument("--username", default="admin", help="Admin username")
+    parser.add_argument("--password", help="Admin password; prompts when omitted")
     args = parser.parse_args()
 
     print("=" * 60)
@@ -135,7 +141,9 @@ if __name__ == "__main__":
     if args.verify_only:
         verify_faqs(args.url)
     else:
-        if load_faqs(args.url):
+        password = args.password or getpass("Admin password: ")
+        auth = HTTPBasicAuth(args.username, password)
+        if load_faqs(args.url, auth):
             verify_faqs(args.url)
         else:
             sys.exit(1)

@@ -10,11 +10,13 @@ import warnings
 class TestSettings:
     """Tests for application settings."""
 
-    def test_settings_loads_defaults(self):
+    def test_settings_loads_defaults(self, monkeypatch):
         """Test that settings load with defaults."""
         from app.core.config import Settings
 
-        settings = Settings()
+        monkeypatch.delenv("ENVIRONMENT", raising=False)
+        monkeypatch.delenv("DEBUG", raising=False)
+        settings = Settings(_env_file=None)
 
         assert settings.app_name == "Campus Assistant"
         assert settings.environment == "development"
@@ -68,13 +70,14 @@ class TestSettings:
         assert prod_settings.is_production is True
         assert prod_settings.is_development is False
 
-    def test_default_secret_key_warning(self):
+    def test_default_secret_key_warning(self, monkeypatch):
         """Test that default secret key triggers a warning."""
         from app.core.config import Settings
 
+        monkeypatch.delenv("SECRET_KEY", raising=False)
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            Settings()
+            Settings(_env_file=None)
 
             # Check if warning was raised
             warning_messages = [str(warning.message) for warning in w]

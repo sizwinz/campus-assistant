@@ -26,11 +26,17 @@ class ChatbotEngine:
     5. Response translation
     """
 
-    def __init__(self):
-        self.translation = get_translation_service()
-        self.vector_store = get_vector_store()
-        self.llm = get_llm_service()
-        self.session_manager = get_session_manager()
+    def __init__(
+        self,
+        translation=None,
+        vector_store=None,
+        llm=None,
+        session_manager=None,
+    ):
+        self.translation = translation or get_translation_service()
+        self.vector_store = vector_store or get_vector_store()
+        self.llm = llm or get_llm_service()
+        self.session_manager = session_manager or get_session_manager()
 
     async def process_message(
         self,

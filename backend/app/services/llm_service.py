@@ -12,7 +12,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from loguru import logger
 
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
 
 settings = get_settings()
 
@@ -51,32 +51,37 @@ class LLMService:
     Uses RAG (Retrieval Augmented Generation) with context.
     """
 
-    def __init__(self):
+    def __init__(self, settings_obj: Settings | None = None):
+        self.settings = settings_obj or settings
         self._llm = None
         self._init_llm()
 
     def _init_llm(self):
         """Initialize the LLM based on configuration."""
-        if settings.llm_provider == "gemini" and settings.google_api_key:
+        provider = self.settings.llm_provider.lower()
+
+        if provider == "gemini" and self.settings.google_api_key:
             self._llm = ChatGoogleGenerativeAI(
-                model="gemini-2.5-flash",
-                google_api_key=settings.google_api_key,
-                temperature=0.3,
-                max_tokens=1024,
+                model=self.settings.llm_model,
+                google_api_key=self.settings.google_api_key.get_secret_value(),
+                temperature=self.settings.llm_temperature,
+                max_tokens=self.settings.llm_max_tokens,
             )
-            logger.info("Initialized Google Gemini LLM")
+            logger.info(f"Initialized Google Gemini LLM model={self.settings.llm_model}")
 
-        elif settings.llm_provider == "openai" and settings.openai_api_key:
+        elif provider == "openai" and self.settings.openai_api_key:
             self._llm = ChatOpenAI(
-                model="gpt-3.5-turbo",
-                openai_api_key=settings.openai_api_key,
-                temperature=0.3,
-                max_tokens=1024,
+                model=self.settings.llm_model,
+                openai_api_key=self.settings.openai_api_key.get_secret_value(),
+                temperature=self.settings.llm_temperature,
+                max_tokens=self.settings.llm_max_tokens,
             )
-            logger.info("Initialized OpenAI LLM")
+            logger.info(f"Initialized OpenAI LLM model={self.settings.llm_model}")
 
+        elif provider not in {"gemini", "openai"}:
+            raise ValueError(f"Unsupported LLM provider: {self.settings.llm_provider}")
         else:
-            logger.warning("No LLM API key configured! Using fallback responses.")
+            logger.warning(f"No API key configured for LLM provider '{provider}'. Using fallback responses.")
             self._llm = None
 
     async def generate_response(

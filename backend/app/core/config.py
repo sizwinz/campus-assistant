@@ -119,6 +119,10 @@ class Settings(BaseSettings):
         default=None,
         description="Telegram bot token from @BotFather"
     )
+    public_base_url: Optional[str] = Field(
+        default=None,
+        description="Public HTTPS base URL used for webhooks, e.g. https://example.edu",
+    )
 
     # ===========================================
     # Twilio/WhatsApp (Optional, Future)
