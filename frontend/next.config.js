@@ -19,7 +19,7 @@ const nextConfig = {
   // Environment variables available in the browser
   // Note: NEXT_PUBLIC_ variables are embedded at build time
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
+    NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000',
     NEXT_PUBLIC_APP_VERSION: process.env.npm_package_version || '2.0.0',
   },
 

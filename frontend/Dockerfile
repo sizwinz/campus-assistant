@@ -3,7 +3,7 @@
 # =============================================================================
 # Multi-stage build for optimized Next.js production image
 # Build: docker build -t campus-assistant-frontend .
-# Run: docker run -p 3000:3000 -e NEXT_PUBLIC_API_URL=http://api:8000 campus-assistant-frontend
+# Run: docker run -p 3000:3000 -e NEXT_PUBLIC_API_BASE_URL=http://api:8000 campus-assistant-frontend
 # =============================================================================
 
 # Stage 1: Install dependencies
@@ -25,8 +25,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Set build-time environment variables
-ARG NEXT_PUBLIC_API_URL=http://localhost:8000
-ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 
 # Disable Next.js telemetry during build
 ENV NEXT_TELEMETRY_DISABLED=1

@@ -1,14 +1,29 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import {
+  createContext,
+  createElement,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
+import type { ReactNode } from 'react'
 
 const STORAGE_KEY = 'campus-assistant-language'
 const DEFAULT_LANGUAGE = 'en'
 
-export function useLanguage() {
+interface LanguageContextValue {
+  language: string
+  setLanguage: (lang: string) => void
+}
+
+const LanguageContext = createContext<LanguageContextValue | null>(null)
+
+export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState(DEFAULT_LANGUAGE)
 
-  // Load from localStorage on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem(STORAGE_KEY)
@@ -25,5 +40,21 @@ export function useLanguage() {
     }
   }, [])
 
-  return { language, setLanguage }
+  const value = useMemo(
+    () => ({
+      language,
+      setLanguage,
+    }),
+    [language, setLanguage]
+  )
+
+  return createElement(LanguageContext.Provider, { value }, children)
+}
+
+export function useLanguage() {
+  const context = useContext(LanguageContext)
+  if (!context) {
+    throw new Error('useLanguage must be used within LanguageProvider')
+  }
+  return context
 }

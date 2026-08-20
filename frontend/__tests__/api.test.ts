@@ -22,7 +22,7 @@ describe('chatApi', () => {
       const result = await chatApi.sendMessage('Hello', 'session-123', 'en');
 
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/chat'),
+        'http://localhost:8000/api/v1/chat',
         expect.objectContaining({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -39,6 +39,19 @@ describe('chatApi', () => {
       });
 
       await expect(chatApi.sendMessage('Hello')).rejects.toThrow('API error');
+    });
+
+    it('includes backend status and detail in API errors', async () => {
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        status: 429,
+        statusText: 'Too Many Requests',
+        json: async () => ({ detail: 'Rate limit exceeded' }),
+      });
+
+      await expect(chatApi.sendMessage('Hello')).rejects.toThrow(
+        'API error 429: Rate limit exceeded'
+      );
     });
 
     it('includes session_id when provided', async () => {

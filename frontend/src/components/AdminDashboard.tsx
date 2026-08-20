@@ -11,14 +11,7 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { adminApi } from '@/lib/api'
-
-interface DashboardStats {
-  sessions: { total: number; active_24h: number }
-  messages: { total: number; today: number }
-  escalations: { pending: number }
-  knowledge_base: { faqs: number; documents: number; vector_chunks: number }
-  performance: { avg_confidence_7d: number }
-}
+import type { DashboardStats } from '@/lib/types'
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
@@ -204,17 +197,17 @@ export default function AdminDashboard() {
           <QuickLink
             title="Manage FAQs"
             description="Add, edit, or remove FAQ entries"
-            href="/api/v1/docs#/FAQs"
+            href="/docs#/FAQs"
           />
           <QuickLink
             title="Upload Documents"
             description="Upload PDFs and circulars"
-            href="/api/v1/docs#/Documents"
+            href="/docs#/Documents"
           />
           <QuickLink
             title="View Conversations"
             description="Review chat logs"
-            href="/api/v1/docs#/Admin"
+            href="/docs#/Admin"
           />
         </div>
       </div>

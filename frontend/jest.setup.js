@@ -15,25 +15,8 @@ jest.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-// Mock hooks used by ChatInterface
-jest.mock('@/hooks/useChat', () => ({
-  useChat: () => ({
-    messages: [],
-    isLoading: false,
-    sendMessage: jest.fn(),
-    suggestions: [],
-  }),
-}));
-
-jest.mock('@/hooks/useLanguage', () => ({
-  useLanguage: () => ({
-    language: 'en',
-    setLanguage: jest.fn(),
-  }),
-}));
-
 // Mock environment variables
-process.env.NEXT_PUBLIC_API_URL = 'http://localhost:8000';
+process.env.NEXT_PUBLIC_API_BASE_URL = 'http://localhost:8000';
 
 // Global fetch mock
 global.fetch = jest.fn();
