@@ -56,6 +56,7 @@ logs/
 
 # ChromaDB data
 data/chroma/
+backend/data/chroma/
 backend/data/chroma_db/
 chroma_db/
 

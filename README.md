@@ -24,7 +24,7 @@ Campus offices answer hundreds of repetitive queries—fee deadlines, scholarshi
 - **RAG-based Q&A**: Intelligent answers using Retrieval Augmented Generation
 - **Multi-turn Conversations**: Context-aware follow-up support
 - **Human Escalation**: Automatic escalation for complex queries
-- **Platform Integration**: Web widget, Telegram, WhatsApp
+- **Platform Integration**: Web app and optional Telegram bot
 - **Analytics Dashboard**: Conversation logs and usage metrics
 
 ## 📸 Screenshots
@@ -45,7 +45,7 @@ Campus offices answer hundreds of repetitive queries—fee deadlines, scholarshi
 ┌─────────────────────────────────────────────────────────────────────┐
 │                        CLIENT LAYER                                 │
 ├───────────────┬───────────────┬───────────────┬─────────────────────┤
-│  Web Widget   │   Telegram    │   WhatsApp    │  College Website    │
+│  Web App      │   Telegram    │ Future WhatsApp│ College Website    │
 └───────────────┴───────────────┴───────────────┴─────────────────────┘
                                 │
                                 ▼
@@ -78,9 +78,9 @@ Campus offices answer hundreds of repetitive queries—fee deadlines, scholarshi
 
 | Component | Technology |
 |-----------|------------|
-| Backend | Python 3.13+, FastAPI |
+| Backend | Python 3.11+, FastAPI |
 | Frontend | Next.js 14, Tailwind CSS |
-| LLM | Google Gemini (gemini-1.5-flash-latest) |
+| LLM | Google Gemini or OpenAI, configured with `LLM_MODEL` |
 | Translation | deep-translator (FREE - no API key needed) |
 | Vector DB | ChromaDB |
 | Database | SQLite (dev) / PostgreSQL (prod) |
@@ -91,7 +91,7 @@ Campus offices answer hundreds of repetitive queries—fee deadlines, scholarshi
 
 ### Prerequisites
 
-- Python 3.13+
+- Python 3.11+
 - Node.js 18+
 - Google API Key (for Gemini)
 
@@ -111,6 +111,9 @@ pip install -r requirements.txt
 cp .env.example .env
 # Edit .env and add your API keys
 
+# For existing databases, run migrations
+alembic upgrade head
+
 # Run the server
 uvicorn app.main:app --reload --port 8000
 ```
@@ -124,7 +127,7 @@ cd frontend
 npm install
 
 # Create .env.local
-echo "NEXT_PUBLIC_API_URL=http://localhost:8000" > .env.local
+echo "NEXT_PUBLIC_API_BASE_URL=http://localhost:8000" > .env.local
 
 # Build for production (recommended - uses less RAM)
 npm run build
@@ -142,10 +145,10 @@ cd backend
 python create_seed_faqs.py
 
 # Load FAQs via API (backend must be running)
-python load_faqs.py
+python load_faqs.py --username admin
 
 # Or manually reindex if FAQs already loaded
-curl -X POST "http://localhost:8000/api/v1/faqs/reindex"
+curl -u admin:dev-password-change-me -X POST "http://localhost:8000/api/v1/faqs/reindex"
 ```
 
 ### Access the Application
@@ -153,7 +156,7 @@ curl -X POST "http://localhost:8000/api/v1/faqs/reindex"
 - **Frontend**: <http://localhost:3000>
 - **API Docs**: <http://localhost:8000/docs>
 - **Admin Panel**: <http://localhost:3000/admin>
-- **Admin Credentials**: `admin` / `admin123`
+- **Development Admin Credentials**: `admin` / `dev-password-change-me`
 
 ## Configuration
 
@@ -165,6 +168,8 @@ curl -X POST "http://localhost:8000/api/v1/faqs/reindex"
 | `LLM_PROVIDER` | Set to "gemini" | Yes |
 | `SECRET_KEY` | Application secret key | Yes (change in prod) |
 | `TELEGRAM_BOT_TOKEN` | Telegram bot token | Optional |
+| `PUBLIC_BASE_URL` | Public HTTPS base URL for Telegram webhook setup | Required for Telegram in production |
+| `NEXT_PUBLIC_API_BASE_URL` | Browser-visible backend origin, without `/api/v1` | Frontend |
 
 **Note:** Translation uses `deep-translator` library which is FREE and requires no API keys.
 
@@ -184,17 +189,18 @@ curl -X POST "http://localhost:8000/api/v1/faqs/reindex"
 ### FAQs
 
 - `GET /api/v1/faqs/` - List FAQs
-- `POST /api/v1/faqs/` - Create FAQ
-- `POST /api/v1/faqs/bulk-import` - Bulk import FAQs
-- `POST /api/v1/faqs/reindex` - Reindex all FAQs in vector store
-- `PUT /api/v1/faqs/{id}` - Update FAQ
-- `DELETE /api/v1/faqs/{id}` - Delete FAQ
+- `POST /api/v1/faqs/` - Create FAQ (admin auth required)
+- `POST /api/v1/faqs/bulk-import` - Bulk import FAQs (admin auth required)
+- `POST /api/v1/faqs/reindex` - Reindex all FAQs in vector store (admin auth required)
+- `PUT /api/v1/faqs/{id}` - Update FAQ (admin auth required)
+- `DELETE /api/v1/faqs/{id}` - Delete FAQ (admin auth required)
 
 ### Documents
 
 - `GET /api/v1/documents/` - List documents
-- `POST /api/v1/documents/upload` - Upload document
-- `DELETE /api/v1/documents/{id}` - Delete document
+- `POST /api/v1/documents/upload` - Upload document (admin auth required)
+- `POST /api/v1/documents/{id}/index` - Index uploaded document (admin auth required)
+- `DELETE /api/v1/documents/{id}` - Delete document (admin auth required)
 
 ### Admin
 
@@ -205,25 +211,18 @@ curl -X POST "http://localhost:8000/api/v1/faqs/reindex"
 
 ## Embedding the Chat Widget
 
-Add this script to your college website:
-
-```html
-<script src="https://your-domain.com/widget.js"></script>
-<script>
-  CampusAssistant.init({
-    apiUrl: 'https://your-api-domain.com',
-    position: 'bottom-right',
-    primaryColor: '#2563eb'
-  });
-</script>
-```
+The repository includes a React chat widget component for this Next.js app. It does not currently publish a standalone `widget.js` embed script.
 
 ## Telegram Bot Setup
 
 1. Create a bot with @BotFather
 2. Get the bot token
 3. Add to `.env`: `TELEGRAM_BOT_TOKEN=your_token`
-4. Set webhook: `GET /api/v1/telegram/setup?host=https://your-domain.com`
+4. Set `PUBLIC_BASE_URL=https://your-domain.com` in the backend environment
+5. Set webhook with admin auth:
+   `curl -u admin:<password> "https://your-domain.com/api/v1/telegram/setup"`
+
+In production, webhook setup requires admin authentication and an HTTPS `PUBLIC_BASE_URL`. A caller-provided `host` is accepted only when it matches `PUBLIC_BASE_URL`.
 
 ## Adding FAQs
 
@@ -231,6 +230,7 @@ Add this script to your college website:
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/faqs/ \
+  -u admin:dev-password-change-me \
   -H "Content-Type: application/json" \
   -d '{
     "question": "What is the fee structure?",
@@ -244,6 +244,7 @@ curl -X POST http://localhost:8000/api/v1/faqs/ \
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/faqs/bulk-import \
+  -u admin:dev-password-change-me \
   -H "Content-Type: application/json" \
   -d '[
     {"question": "...", "answer": "...", "category": "admission"},
@@ -255,6 +256,7 @@ curl -X POST http://localhost:8000/api/v1/faqs/bulk-import \
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/documents/upload \
+  -u admin:dev-password-change-me \
   -F "file=@admission_circular.pdf" \
   -F "category=admission" \
   -F "description=Admission guidelines 2024"
@@ -285,9 +287,13 @@ docker-compose up -d
 
 1. Set up a PostgreSQL database
 2. Update `DATABASE_URL` in `.env`
-3. Run migrations
-4. Deploy backend with gunicorn/uvicorn
-5. Deploy frontend with `npm run build && npm start`
+3. Generate a strong admin password hash with `python -m app.cli hash-password`
+4. Set `ADMIN_PASSWORD_HASH`, `SECRET_KEY`, `CORS_ORIGINS`, and provider API keys
+5. Run migrations with `alembic upgrade head`
+6. Deploy backend with gunicorn/uvicorn
+7. Deploy frontend with `npm run build && npm start`
+
+`Base.metadata.create_all()` is disabled in production startup; schema changes are applied only through Alembic migrations. The Docker image runs `alembic upgrade head` before starting unless `RUN_MIGRATIONS=false`.
 
 ## Maintenance Guide (For Volunteers)
 
@@ -304,11 +310,9 @@ docker-compose up -d
 
 ### Adding New FAQs
 
-1. Log in to admin panel
-2. Navigate to FAQs section
-3. Click "Add FAQ"
-4. Enter question, answer, and category
-5. Save - it's automatically indexed!
+1. Use the protected FAQ API endpoints or `backend/load_faqs.py`
+2. Authenticate with admin Basic Auth
+3. Create or bulk import FAQs; successful writes are indexed automatically
 
 ### Troubleshooting
 
@@ -320,7 +324,7 @@ docker-compose up -d
 
 **FAQs not appearing in chat responses?**
 
-- Reindex FAQs: `curl -X POST http://localhost:8000/api/v1/faqs/reindex`
+- Reindex FAQs: `curl -u admin:<password> -X POST http://localhost:8000/api/v1/faqs/reindex`
 - Check vector store has documents: `/api/v1/admin/dashboard`
 
 **Translation not working?**
@@ -348,4 +352,3 @@ Built for **TechSprint 2025 - GDGOC Hackathon**
 For issues or questions:
 
 - Create a GitHub issue
-- Contact: <sahajitaliya33@gmail.com>
