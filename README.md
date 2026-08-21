@@ -1,7 +1,6 @@
 # Campus Assistant
 
 > Multilingual AI Helpdesk and Knowledge Base for Educational Institutions  
-> **TechSprint 2025 - GDGOC Hackathon** | Track: EdTech | Team: Valo Prophets
 
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
@@ -326,12 +325,3 @@ npm test
 ## License
 
 This project is open source and distributed under the [MIT License](LICENSE).
-
----
-
-## Team
-
-Developed for **TechSprint 2025 - GDGOC Hackathon** by **Team Valo Prophets**:
-
-- Sahaj Italiya ([@sizwinz](https://github.com/sizwinz))
-- Divy Viradiya ([@divyviradiya2](https://github.com/divyviradiya2))\n
