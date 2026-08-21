@@ -334,4 +334,4 @@ This project is open source and distributed under the [MIT License](LICENSE).
 Developed for **TechSprint 2025 - GDGOC Hackathon** by **Team Valo Prophets**:
 
 - Sahaj Italiya ([@sizwinz](https://github.com/sizwinz))
-- Divy Viradiya ([@divyviradiya1501](https://github.com/divyviradiya1501))\n
+- Divy Viradiya ([@divyviradiya2](https://github.com/divyviradiya2))\n
