@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="images/logo.png" alt="Campus Assistant Logo" width="280" />
+</p>
+
 # Campus Assistant
 
 > Multilingual AI Helpdesk and Knowledge Base for Educational Institutions  
