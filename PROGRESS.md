@@ -402,5 +402,5 @@ F:\Sahaj\Projects\SIH\
 
 **Team Valo Prophets** - TechSprint 2025 - GDGOC Hackathon
 
-GitHub: [@sahaj33-op](https://github.com/sahaj33-op)
+GitHub: [@sizwinz](https://github.com/sizwinz)
 Email: sahajitaliya33@gmail.com
