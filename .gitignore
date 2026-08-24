@@ -33,9 +33,13 @@ ENV/
 env/
 .venv/
 
-# IDE
+# IDE and AI Agents
 .idea/
 .vscode/
+.claude/
+.gemini/
+.planning/
+.antigravity/
 *.swp
 *.swo
 *~
